@@ -4,18 +4,16 @@ import dns.flags
 import dns.query
 
 
-def decode_request(request: bytes) -> dns.message.Message:
-    message = dns.message.from_wire(request)
-
-    return message
+def decode_request(request: dns.message.Message) -> dict:
+    return {}
 
 
-def build_response(request: bytes) -> bytes:
+def build_response(request: dns.message.Message) -> dns.message.Message:
     decoded_request = decode_request(request)
 
-    response = dns.message.make_response(decoded_request, recursion_available=False)
+    response = dns.message.make_response(request, recursion_available=False)
 
-    return response.to_wire()
+    return response
 
 
 def main():
@@ -28,7 +26,7 @@ def main():
 
     while True:
         message, time, sender_addr = dns.query.receive_udp(sock)
-        dns.query.send_udp(sock, dns.message.make_response(message, recursion_available=False), destination=sender_addr)
+        dns.query.send_udp(sock, build_response(message), destination=sender_addr)
 
 
 if __name__ == '__main__':
