@@ -9,9 +9,18 @@ def decode_request(request: dns.message.Message) -> dict:
 
 
 def build_response(request: dns.message.Message) -> dns.message.Message:
+    # - request - #
+    # -- decode relevant request parameters -- #
     decoded_request = decode_request(request)
 
+    # -- analyze request -- #
+
+    # - response - #
+    # -- build base response -- #
     response = dns.message.make_response(request, recursion_available=False)
+
+    # -- gather relevant response data -- #
+    # -- build full response -- #
 
     return response
 
