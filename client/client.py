@@ -20,8 +20,8 @@ def encoded_subdomain(subdomains: list[str]):
 
 
 def encoded_domain() -> str:
-    subdomain = ['MY', 'Test', 'path']
-    # subdomain = ['ping']
+    # subdomain = ['MY', 'Test', 'path']
+    subdomain = ['ping']
     domain = 'google.com'
     e_domain = f"{encoded_subdomain(subdomain)}.{domain}"
 
@@ -35,10 +35,7 @@ def main():
     name_server = '127.0.0.1'
     domain = dns.name.from_text(encoded_domain())
 
-    request = dns.message.make_query(domain, dns.rdatatype.ANY)
-    request.flags |= dns.flags.AD
-    request.rdtype = dns.rdatatype.TXT
-    request.rdclass = dns.rdataclass.IN
+    request = dns.message.make_query(domain, dns.rdatatype.TXT)
     response = dns.query.udp(request, name_server)
 
     print(f"{response}")
