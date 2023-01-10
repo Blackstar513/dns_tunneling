@@ -3,6 +3,7 @@ import dns.message
 import dns.flags
 import dns.query
 import dns.rrset
+import dns.rdata
 import base64
 
 
@@ -24,7 +25,7 @@ def analyze_subdomain(subdomains: list[str]) -> dict[str, any]:
             'data': []}
 
 
-def build_response_data(analyzed_request: dict[str, any]) -> str:
+def build_response_data(analyzed_request: dict[str, any]) -> dns.rdata:
     if analyzed_request['command'] == 'ping':
         return 'pong'
     return 'no-pong'
@@ -47,6 +48,10 @@ def build_response(request: dns.message.Message) -> dns.message.Message:
     # -- encode response data -- #
     e_response_data = base64.b64encode(response_data.encode('utf-8')).decode('utf-8')
     # -- build full response -- #
+    rdata = dns.rdata.from_text(dns.rdataclass.IN, dns.rdatatype.TXT, e_response_data, request.question[0].name, relativize=True)
+    rrset = dns.rrset.from_rdata(request.question[0].name, 1, rdata)
+
+    response.answer.append(rrset)
 
     return response
 
