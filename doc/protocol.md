@@ -28,10 +28,13 @@ evil.bot
 - send data to server
 
 ##### Head
+- \<base32>\<data>.[...].\<base32>\<data>.head.data.\<ClientID>.evil.bot
 - 0.\<base32>\<data>.[...].\<base32>\<data>.head.data.\<ClientID>.evil.bot
+  - optional: body request signals end of head
 
 #### Body
 
+- \<base32>\<data>.[...].\<base32>\<data>.body.data.\<ClientID>.evil.bot
 - 0.\<base32>\<data>.[...].\<base32>\<data>.body.data.\<ClientID>.evil.bot
 
 ### TXT
