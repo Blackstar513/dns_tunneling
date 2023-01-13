@@ -113,15 +113,27 @@ class Nameserver:
         match analyzed_request:
             case {'command': CommandsEnum.REQUEST_ID}:
                 return self.server_state.request_id_response()
-            case {'command': CommandsEnum.DATA_HEAD, 'client_id': client_id, 'data': data, 'done': done}:
+            case {'command': CommandsEnum.DATA_HEAD,
+                  'client_id': client_id,
+                  'data': data, 'done': done}:
                 return self.server_state.data_response(client_id=client_id, data=data, is_head=True, done=done)
-            case {'command': CommandsEnum.DATA_BODY, 'client_id': client_id, 'data': data, 'done': done}:
+            case {'command': CommandsEnum.DATA_BODY,
+                  'client_id': client_id,
+                  'data': data, 'done': done}:
                 return self.server_state.data_response(client_id=client_id, data=data, is_head=False, done=done)
 
     def build_txt_response_data(self, analyzed_request: dict[str, any]) -> dns.rdata:
         match analyzed_request:
-            case {'command': CommandsEnum.REQUEST_ID}:
-                return
+            case {'command': CommandsEnum.POLL,
+                  'client_id': client_id}:
+                return self.server_state.poll_response(client_id=client_id)
+            case {'command': CommandsEnum.CONTINUE,
+                  'client_id': client_id}:
+                return self.server_state.continue_response(client_id=client_id)
+            case {'command': CommandsEnum.CURL,
+                  'client_id': client_id,
+                  'data': webpage, 'done': done}:
+                return self.server_state.curl_response(client_id=client_id, webpage=webpage, done=done)
 
     def build_response_data(self, unpacked_request: dict[str, any], analyzed_request: dict[str, any]):
         if unpacked_request['request_type'] == dns.rdatatype.A.name:
