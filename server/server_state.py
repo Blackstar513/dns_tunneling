@@ -1,6 +1,8 @@
 from enum import Enum, auto
 from datastorage import ClientStorage
 from random import randint
+import base64
+import binascii
 
 
 class StateEnum(Enum):
@@ -42,7 +44,7 @@ class ServerState:
         self.__NEXT_CLIENT_ID += 1
         self.__state[c_id] = {'state': StateEnum.IDLE,
                               'transmission': None,
-                              'request': ""}
+                              'request': b""}
         self.__storage[c_id] = ClientStorage(c_id)
 
         return f"10.{randint(1,255)}.{randint(1,255)}.{c_id}"
@@ -85,19 +87,22 @@ class ServerState:
         self.__state[client_id]['request'] += webpage
 
         if done:
-
-            # TODO: curl
-            curl = "I'm curling"
+            try:
+                requested_url = base64.b32decode(self.__state[client_id]['request']).decode('utf-8')
+                # TODO: curl
+                curl = f"I'm curling {requested_url}"
+            except binascii.Error:
+                curl = "ENCODING ERROR"
 
             self.__state[client_id]['state'] = StateEnum.SENDING_DATA
-            self.__state[client_id]['request'] = ""
+            self.__state[client_id]['request'] = b""
             self.__state[client_id]['transmission'] = TransmissionState(curl, TransmissionTypeEnum.DATA)
 
             return self.__state[client_id]['transmission'].get_next_data()
         else:
             self.__state[client_id]['state'] = StateEnum.RECEIVING_REQUEST
 
-            return ""
+            return "NOTHING"
 
     def dump_latest_storage(self):
         for c_id, storage in self.__storage.items():
