@@ -80,7 +80,7 @@ evil.bot
 
 ##### Noting
 
-- empty string
+- NOTHING
 
 ##### Data
 
@@ -95,7 +95,7 @@ evil.bot
 
 ##### Noting
 
-- empty string
+- NOTHING
 
 ##### Data
 
