@@ -4,7 +4,7 @@ import dns.flags
 import dns.query
 import dns.rrset
 import dns.rdata
-from enum import Enum, auto
+from enum import Enum
 from server_state import ServerState
 
 
