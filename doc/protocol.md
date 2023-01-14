@@ -62,6 +62,8 @@ evil.bot
 
 ## ENCODING
 
+- TXT data is base64 encoded (except for the command and the space after it)
+
 ## RESPONSES
 
 ### A
@@ -84,11 +86,11 @@ evil.bot
 
 ##### Data
 
-- DATA\<space>\<data>
+- DATA\<space>\<base64>\<data>
 
 ##### shell command
 
-- SHELL\<space>\<command>
+- SHELL\<space>\<base64>\<command>
 
 
 #### Continue
@@ -99,10 +101,10 @@ evil.bot
 
 ##### Data
 
-- \<data>
+- \<base64>\<data>
 
 ##### shell command
 
-- \<command>
+- \<base64>\<command>
 
 ## SEQUENCE DIAGRAM
