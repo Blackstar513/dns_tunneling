@@ -1,8 +1,9 @@
-from enum import Enum, auto
+from enum import Enum
 from datastorage import ClientStorage
 from random import randint
 import base64
 import binascii
+import requests
 
 
 class StateEnum(Enum):
@@ -21,7 +22,7 @@ class TransmissionTypeEnum(Enum):
 class TransmissionState:
 
     def __init__(self, data: str, transmission_type: TransmissionTypeEnum):
-        self._data = f"{transmission_type.name} {data}"
+        self._data = base64.b64encode(f"{transmission_type.name} {data}".encode('utf-8')).decode('utf-8')
 
     def get_next_data(self):
         next_data = self._data[:255]
@@ -80,6 +81,7 @@ class ServerState:
         if not response:
             self.__state[client_id]['state'] = StateEnum.IDLE
             self.__state[client_id]['transmission'] = None
+            response = 'NOTHING'
 
         return response
 
@@ -89,8 +91,7 @@ class ServerState:
         if done:
             try:
                 requested_url = base64.b32decode(self.__state[client_id]['request']).decode('utf-8')
-                # TODO: curl
-                curl = f"I'm curling {requested_url}"
+                curl = requests.get(requested_url).text
             except binascii.Error:
                 curl = "ENCODING ERROR"
 
@@ -98,7 +99,12 @@ class ServerState:
             self.__state[client_id]['request'] = b""
             self.__state[client_id]['transmission'] = TransmissionState(curl, TransmissionTypeEnum.DATA)
 
-            return self.__state[client_id]['transmission'].get_next_data()
+            result = self.__state[client_id]['transmission'].get_next_data()
+
+            if not result:
+                return "NOTHING"
+
+            return result
         else:
             self.__state[client_id]['state'] = StateEnum.RECEIVING_REQUEST
 
