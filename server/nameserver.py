@@ -1,12 +1,13 @@
 import socket
-import threading
 import dns.message
 import dns.flags
 import dns.query
 import dns.rrset
 import dns.rdata
 from enum import Enum
-from server_state import ServerState, ServerStateReader, ServerStateResponseHandler
+from server_state import ServerState, ServerStateResponseHandler
+from cli import CommandLineInterface
+from command_socket import CommandSocket
 
 
 class OldTransactionIDException(ValueError):
@@ -29,9 +30,10 @@ class Nameserver:
     def __init__(self, nameserver_ip: str = None):
         self.server_state = ServerState()
         self.response_handler = ServerStateResponseHandler(self.server_state)
-        self.state_reader = threading.Thread(target=ServerStateReader(self.server_state).run, daemon=True)
 
-        self.state_reader.start()
+        self.command_socket = CommandSocket(server_state=self.server_state)
+        self.cli = CommandLineInterface(server_state=self.server_state)
+        self.cli.start()
 
         port = 53
         ip = '127.0.0.1' if nameserver_ip is None else nameserver_ip
@@ -81,6 +83,7 @@ class Nameserver:
                 'transaction_id': request.id,
                 'request_type': dns.rdatatype.to_text(request.question[0].rdtype),
                 'request_name': request_name,
+                'request_url': b".".join(request_name.labels).decode('utf-8'),
                 'zero_terminator': zero_terminator}
 
     @staticmethod
@@ -113,7 +116,7 @@ class Nameserver:
             case _:
                 return {'command': CommandsEnum.UNKNOWN}
 
-    def build_a_response_data(self, analyzed_request: dict[str, any]) -> dns.rdata:
+    def build_a_response_data(self, analyzed_request: dict[str, any]) -> str:
         match analyzed_request:
             case {'command': CommandsEnum.REQUEST_ID}:
                 return self.response_handler.request_id_response()
@@ -126,7 +129,7 @@ class Nameserver:
                   'data': data, 'done': done}:
                 return self.response_handler.data_response(client_id=client_id, data=data, is_head=False, done=done)
 
-    def build_txt_response_data(self, analyzed_request: dict[str, any]) -> dns.rdata:
+    def build_txt_response_data(self, analyzed_request: dict[str, any]) -> str:
         match analyzed_request:
             case {'command': CommandsEnum.POLL,
                   'client_id': client_id}:
@@ -139,7 +142,7 @@ class Nameserver:
                   'data': webpage, 'done': done}:
                 return self.response_handler.curl_response(client_id=client_id, webpage=webpage, done=done)
 
-    def build_response_data(self, unpacked_request: dict[str, any], analyzed_request: dict[str, any]):
+    def build_response_data(self, unpacked_request: dict[str, any], analyzed_request: dict[str, any]) -> str:
         if unpacked_request['request_type'] == dns.rdatatype.A.name:
             return self.build_a_response_data(analyzed_request)
         elif unpacked_request['request_type'] == dns.rdatatype.TXT.name:
@@ -149,6 +152,7 @@ class Nameserver:
         # - request - #
         # -- unpack relevant request parameters -- #
         unpacked_request = self.unpack_request(request)
+        self.server_state.add_request(unpacked_request['request_url'])
 
         # -- check if request is already getting handled --#
         if not self.server_state.is_new_transaction(unpacked_request['transaction_id']):
@@ -163,6 +167,7 @@ class Nameserver:
 
         # -- build relevant response data -- #
         response_data = self.build_response_data(unpacked_request, analyzed_request)
+        self.server_state.add_response(response_data)
 
         # -- build full response -- #
         rdata = dns.rdata.from_text(dns.rdataclass.IN, dns.rdatatype.from_text(unpacked_request['request_type']),

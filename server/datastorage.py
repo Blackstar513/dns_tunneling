@@ -8,6 +8,9 @@ class DataStorage:
     head: str
     body: str
 
+    def __bool__(self):
+        return bool(self.head) and bool(self.body)
+
 
 class ClientStorage:
 
@@ -47,6 +50,12 @@ class ClientStorage:
     @property
     def client_id(self):
         return self.__client_id
+
+    def get_latest_storage(self):
+        try:
+            return self._storage[-1]
+        except IndexError:
+            return DataStorage("", "")
 
     def print_latest_storage(self):
         if self._storage:
