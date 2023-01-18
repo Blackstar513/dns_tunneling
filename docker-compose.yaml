@@ -3,6 +3,7 @@ version: '3'
 services:
   client:
     build: client
+    container_name: dns_tunneling-client
     environment:
       GATEWAY_IP: 172.28.1.1
       DNS_SERVER_IP: 172.29.2.1
@@ -16,6 +17,7 @@ services:
         ipv4_address: 172.28.2.1
   firewall:
     build: firewall
+    container_name: dns_tunneling-firewall
     depends_on:
       - dns_server
     privileged: true
@@ -30,6 +32,7 @@ services:
         ipv4_address: 172.29.1.1
   dns_server:
     build: dns_server
+    container_name: dns_tunneling-dns_server
     depends_on:
       - server
     cap_add:
@@ -39,6 +42,7 @@ services:
         ipv4_address: 172.29.2.1
   server:
     build: server
+    container_name: dns_tunneling-server
     networks:
       internet:
         ipv4_address: 172.29.2.2

@@ -4,10 +4,10 @@
 # to interact with the system and to understand what is going on.
 
 # docker container names as they are listed in `docker ps`.
-export CLIENT_NAME=dns_tunneling-client-1
-export SERVER_NAME=dns_tunneling-server-1
-export FIREWALL_NAME=dns_tunneling-firewall-1
-export DNS_SERVER_NAME=dns_tunneling-dns_server-1
+export CLIENT_NAME=dns_tunneling-client
+export SERVER_NAME=dns_tunneling-server
+export FIREWALL_NAME=dns_tunneling-firewall
+export DNS_SERVER_NAME=dns_tunneling-dns_server
 
 
 tmux new-session -d -s dns_tunneling 'docker container logs --follow $(docker ps -aqf "name=$FIREWALL_NAME")'
