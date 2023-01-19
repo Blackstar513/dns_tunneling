@@ -1,11 +1,8 @@
-import threading
-
 from server_state import ServerState, ServerStateReader
 from threading import Thread
 from time import sleep
 from rich.live import Live
-from rich.pretty import Pretty
-from rich.markdown import Markdown
+from rich.columns import Columns
 from rich.align import Align
 from rich.panel import Panel
 from rich.console import Console
@@ -79,8 +76,15 @@ class CommandLineInterface(Thread):
 
         else:
             color = COLOR_LIST[(self._client_id - 1) % len(COLOR_LIST)]
+
+            data = self._state_reader.get_latest_client_data(self._client_id)
+            head = data.head
+            if head.startswith('ls') or head.startswith('ls '):
+                body = Columns(data.body.split('\n'), expand=True, equal=True, column_first=True)
+            else:
+                body = data.body
             layout['upper']['status'].update(Panel(Align(self._state_reader.get_client_status(self._client_id), 'center', vertical='middle'), title=f"Status Client {self._client_id}", style=f"{color} bold"))
-            layout['lower']['data'].update(Panel(self._state_reader.get_latest_client_data(self._client_id).body, title=f"Data Client {self._client_id}", style=f"{color} bold"))
+            layout['lower']['data'].update(Panel(body, title=f"Data Client {self._client_id}: {head}", style=f"{color} bold"))
             layout['lower']['commands'].update(Panel(self._make_mardown_list(self._state_reader.get_next_x_client_commands(self._client_id, 5)), title=f"Client {self._client_id} Commands", style=f"{color} bold"))
 
         return layout
