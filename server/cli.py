@@ -59,7 +59,7 @@ class CommandLineInterface(Thread):
         )
 
         layout['upper'].split_column(
-            Layout(name='traffic'),
+            Layout(name='traffic', ratio=3),
             Layout(name='status')
         )
 
@@ -69,11 +69,9 @@ class CommandLineInterface(Thread):
         )
 
         layout['lower'].split_row(
-            Layout(name='data'),
+            Layout(name='data', ratio=2),
             Layout(name='commands')
         )
-
-        layout['lower']['data'].ratio = 2
 
         layout['upper']['traffic']['in'].update(Panel(Align(self._state_reader.get_latest_request(), 'center', vertical='middle'), title="Incoming Traffic", style="orange1 bold"))
         layout['upper']['traffic']['out'].update(Panel(Align(self._state_reader.get_latest_response(), 'center', vertical='middle'), title="Outgoing Traffic", style="cyan bold"))
@@ -103,10 +101,13 @@ class CommandLineInterface(Thread):
 
     def _scroll_data(self, data: str, infinite: bool = False) -> str:
         list_data = data.split('\n')
+        # remove empty last newline
+        if data and not list_data[-1]:
+            list_data = list_data[:-1]
         scrolled_data = list_data[self._data_scroller_line_index:]
 
         if infinite:
-            if data:
+            if data and scrolled_data:
                 scrolled_data += [f"[red]{'-'*10}LOOP{'-'*10}[/red]"]
             scrolled_data += list_data[:self._data_scroller_line_index]
             self._data_scroller_line_index = self._data_scroller_line_index % len(scrolled_data)
