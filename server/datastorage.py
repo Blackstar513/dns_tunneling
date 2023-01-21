@@ -28,11 +28,15 @@ class ClientStorage:
         try:
             head = base64.b32decode(head).decode('utf-8')
         except binascii.Error:
-            pass
+            self._current_head = []
+            self._current_body = []
+            return
         try:
             body = base64.b32decode(body).decode('utf-8')
         except binascii.Error:
-            pass
+            self._current_head = []
+            self._current_body = []
+            return
 
         self._storage.append(DataStorage(head, body))
         self._current_head = []
