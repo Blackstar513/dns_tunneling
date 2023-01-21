@@ -5,6 +5,7 @@ import dns.message
 import dns.name
 import dns.rdatatype
 from enum import Enum
+from typing import Union
 
 
 class StateEnum(Enum):
@@ -14,6 +15,7 @@ class StateEnum(Enum):
     REQUESTING_ID = 'requesting_id'
     SENDING_DATA = 'sending_data'
     RECEIVING_DATA = 'receiving_data'
+    RECEIVING_CURL_DATA = 'receiving_curl_data'
     RECEIVING_SHELL = 'receiving_shell'
 
 
@@ -39,6 +41,10 @@ class TransmissionState:
 
         return next_data, not self._data
 
+    @property
+    def data(self) -> str:
+        return self._data
+
 
 class ClientState:
 
@@ -52,9 +58,12 @@ class ClientState:
         }
         self.__data_storage = []
         self.__current_data = []
+        self.__responses = []
 
         self.__state_lock = threading.Lock()
         self.__data_storage_lock = threading.Lock()
+        self.__current_data_lock = threading.Lock()
+        self.__responses_lock = threading.Lock()
 
     @property
     def state_lock(self) -> threading.Lock:
@@ -65,12 +74,32 @@ class ClientState:
         return self.__data_storage_lock
 
     @property
-    def client_id(self):
+    def current_data_lock(self) -> threading.Lock:
+        return self.__current_data_lock
+
+    @property
+    def responses_lock(self) -> threading.Lock:
+        return self.__responses_lock
+
+    @property
+    def client_id(self) -> int:
         return self.__client_id
 
     @client_id.setter
-    def client_id(self, value):
+    def client_id(self, value: int):
         self.__client_id = value
+
+    @property
+    def current_data(self) -> list[bytes]:
+        return self.__current_data
+
+    @property
+    def responses(self) -> list[str]:
+        return self.__responses
+
+    def add_response(self, response: str):
+        with self.__responses_lock:
+            self.responses.append(response)
 
     @property
     def state(self):
@@ -164,19 +193,33 @@ class ClientStateResponseHandler:
     def __init__(self, client_state: ClientState):
         self._client_state = client_state
 
-    def client_id(self, client_id: int) -> None:
-        self._client_state.client_id = client_id
+    def client_id(self, client_id_or_ip: Union[bytes, int]) -> None:
+        if type(client_id_or_ip) == bytes:
+            self._client_state.client_id = int(client_id_or_ip[client_id_or_ip.rindex(b'.') + 1:])
+            self._client_state.add_response(client_id_or_ip.decode('utf-8'))
+        else:
+            self._client_state.client_id = client_id_or_ip
 
     def data(self, data: bytes, done: bool) -> None:
         if done:
             self._client_state.set_state({'state': StateEnum.IDLE})
         else:
-            self._client_state.set_state({'state': StateEnum.RECEIVING_DATA})
+            with self._client_state.state_lock:
+                state = self._client_state.state['state']
+
+            if state == StateEnum.CURL or state == StateEnum.RECEIVING_CURL_DATA:
+                self._client_state.set_state({'state': StateEnum.RECEIVING_CURL_DATA})
+            else:
+                self._client_state.set_state({'state': StateEnum.RECEIVING_DATA})
+
         self._client_state.add_data_to_storage(data, done)
+        self._client_state.add_response(data.decode('utf-8'))
 
     def command(self, command: bytes, done: bool) -> str:
         with self._client_state.state_lock:
             current_command = self._client_state.state['command']
+
+        self._client_state.add_response(command.decode('utf-8'))
 
         appended_command = current_command + command
 
@@ -196,16 +239,56 @@ class ClientStateResponseHandler:
         else:
             return ""
 
+    def nothing(self, response: bytes) -> str:
+        self._client_state.add_response(response.decode('utf-8'))
+        return "NOTHING TO DO"
+
+    def add_response(self, response: bytes):
+        self._client_state.add_response(response.decode('utf-8'))
+
 
 class ClientStateReader:
 
     def __init__(self, client_state: ClientState):
         self._client_state = client_state
 
+    def read_client_id(self) -> int:
+        return self._client_state.client_id
+
     def read_state(self) -> StateEnum:
         with self._client_state.state_lock:
             return self._client_state.state['state']
 
+    def read_command(self) -> str:
+        with self._client_state.state_lock:
+            return self._client_state.state['command'].decode('utf-8')
+
+    def read_latest_response(self) -> str:
+        with self._client_state.responses_lock:
+            try:
+                return self._client_state.responses[-1]
+            except IndexError:
+                return ""
+
     def read_latest_data(self) -> str:
         with self._client_state.data_storage_lock:
-            return self._client_state.data_storage[-1]
+            try:
+                return self._client_state.data_storage[-1]
+            except IndexError:
+                return ""
+
+    def read_current_data(self) -> str:
+        with self._client_state.current_data_lock:
+            current_data = b"".join(self._client_state.current_data).decode('utf-8')
+            if not current_data:
+                return base64.b64encode(self.read_latest_data().encode('utf-8')).decode('utf-8')
+            else:
+                return current_data
+
+    def read_transmission_data(self) -> str:
+        with self._client_state.state_lock:
+            transmission = self._client_state.state['transmission']
+            if transmission:
+                return transmission.data
+            else:
+                return ""
