@@ -26,11 +26,11 @@ class CommandLineInterface(Thread):
         self._console = Console()
         self._client_switch_seconds = 10
         self._client_switch_counter = 0
-        self._update_per_second = 3
+        self._update_per_second = 10
         self._sleep_seconds = 1 / self._update_per_second
         self._client_id = 0
 
-        self._data_scroll_seconds = 2
+        self._data_scroll_seconds = 0.35
         self._data_scroll_seconds_counter = 0
         self._data_scroller_line_index = 0
 
@@ -44,6 +44,7 @@ class CommandLineInterface(Thread):
 
                 if self._data_scroll_seconds_counter > self._data_scroll_seconds:
                     self._data_scroller_line_index += 1
+                    self._data_scroll_seconds_counter = 0
 
                 if self._client_switch_counter > self._client_switch_seconds:
                     self._update_client_id()
