@@ -1,5 +1,4 @@
 import click
-from dataclasses import dataclass
 from typing import Optional
 from client_state import ClientState
 from communicator import Communicator, AutoCommunicator
@@ -21,7 +20,7 @@ def main(ctx, nameserver: str, domain: str, lag: int, client_id: Optional[int], 
     global IS_LIVE
     IS_LIVE = live
     ctx.obj = Communicator(client_state=ClientState(), domain=domain, name_server=nameserver, client_id=client_id,
-                           request_lag_seconds=lag)
+                           request_lag_seconds=lag, live_output=live)
 
 
 @main.command(name='id')

