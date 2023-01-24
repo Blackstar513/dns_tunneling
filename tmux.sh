@@ -17,7 +17,7 @@ tmux set -g pane-border-status top
 tmux select-pane -t 0 -T "Firewall (logs)"
 tmux split-window -v -t 0 'docker container logs --follow $(docker ps -aqf "name=$DNS_SERVER_NAME")'
 tmux select-pane -t 1 -T "DNS Server (logs)" 
-tmux split-window -v -t 1 'docker container logs --follow $(docker ps -aqf "name=$SERVER_NAME")'
+tmux split-window -v -t 1 'docker exec -it $(docker ps -aqf "name=$SERVER_NAME") python -u nameserver.py'
 tmux select-pane -t 2 -T "Server (logs)"
 tmux select-layout even-vertical
 

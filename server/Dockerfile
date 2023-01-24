@@ -5,4 +5,4 @@ WORKDIR /usr/src/server
 COPY . .
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD [ "python", "-u", "./nameserver.py" ]
+ENTRYPOINT [ "/bin/sh", "entrypoint.sh" ]
