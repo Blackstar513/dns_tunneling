@@ -17,7 +17,8 @@ class Communicator:
 
     def __init__(self, client_state: ClientState, domain: str, name_server: str, client_id: Optional[int] = None,
                  request_lag_seconds: int = 1, live_output: bool = False):
-        self._name_server = name_server
+        # if no name-server is provided, get the first name-server configured by the system
+        self._name_server = dns.resolver.get_default_resolver().nameservers[0] if name_server is None else name_server
         self._response_handler = ClientStateResponseHandler(client_state)
         self._request_handler = ClientStateRequestHandler(client_state, domain)
         self._state_reader = ClientStateReader(client_state)
