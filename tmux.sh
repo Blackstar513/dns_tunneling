@@ -20,7 +20,7 @@ tmux select-pane -t 1 -T "Server (logs)"
 
 tmux split-window -hbf -t 0 'docker exec -it $(docker ps -aqf "name=$CLIENT_NAME") sh'
 tmux select-pane -t 0 -T "Client"
-tmux split-window -v -t 0 'docker exec -it $(docker ps -aqf "name=$SERVER_NAME") sh'
+tmux split-window -v -t 0 'docker exec -it $(docker ps -aqf "name=$SERVER_NAME") sh -c "sleep 1 && python cli_commander.py"'
 tmux select-pane -t 1 -T "Server"
 
 
