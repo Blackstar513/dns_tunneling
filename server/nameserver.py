@@ -4,6 +4,7 @@ import dns.flags
 import dns.query
 import dns.rrset
 import dns.rdata
+import click
 from enum import Enum
 from server_state import ServerState, ServerStateResponseHandler
 from cli import CommandLineInterface
@@ -27,7 +28,7 @@ class CommandsEnum(Enum):
 
 class Nameserver:
 
-    def __init__(self, nameserver_ip: str = None):
+    def __init__(self, ip: str = '127.0.0.1'):
         self.server_state = ServerState()
         self.response_handler = ServerStateResponseHandler(self.server_state)
 
@@ -36,7 +37,6 @@ class Nameserver:
         self.cli.start()
 
         port = 53
-        ip = '127.0.0.1' if nameserver_ip is None else nameserver_ip
 
         # AF_INET = ipv4, SOCK_DGRAM = datagram (udp)
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -179,9 +179,13 @@ class Nameserver:
         return response
 
 
-def main():
-    dns_server = Nameserver()
+@click.command()
+@click.option("--ip", default=None, type=str, help="IP address of the server")
+def nameserver(ip):
+    if ip is None:
+        ip = socket.gethostbyname(socket.gethostname())
+    dns_server = Nameserver(ip)
 
 
 if __name__ == '__main__':
-    main()
+    nameserver()

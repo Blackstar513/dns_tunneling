@@ -1,3 +1,4 @@
 dnspython==2.2.1
 requests==2.28.2
 rich==13.1.0
+click==8.1.3
