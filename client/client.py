@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import click
 from typing import Optional
 from client_state import ClientState
@@ -7,7 +9,7 @@ IS_LIVE = False
 
 
 @click.group()
-@click.option('--nameserver', type=str, default='127.0.0.1', show_default=True, help="IP-Address of the nameserver.")
+@click.option('--nameserver', type=str, default=None, help="IP-Address of the nameserver.")
 @click.option('--domain', type=str, default='evil.bot', show_default=True, help="Domain name of the target server.")
 @click.option('--lag', type=click.IntRange(min=0), default=0, help="Number of seconds between chained requests.")
 @click.option('--id', 'client_id', type=int, help="Set the id of the client (otherwise a new id gets requested for every command).")
@@ -67,7 +69,7 @@ def data(comm: Communicator, head: str, body: str):
 
 
 @main.command()
-@click.option('--webpage', type=str, required=True, help="The requested webpage.")
+@click.argument('webpage', type=str)
 @click.pass_obj
 def curl(comm: Communicator, webpage: str):
     """
@@ -79,7 +81,7 @@ def curl(comm: Communicator, webpage: str):
 
 
 @main.command()
-@click.option('--command', type=str, required=True, help="The shell command that should be executed.")
+@click.argument('command', type=str)
 @click.pass_obj
 def shell(comm: Communicator, command: str):
     """
