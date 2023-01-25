@@ -33,6 +33,8 @@ services:
   dns_server:
     build: dns_server
     container_name: dns_tunneling-dns_server
+    environment:
+      EVIL_DNS_SERVER_IP: 172.29.2.2
     depends_on:
       - server
     cap_add:
