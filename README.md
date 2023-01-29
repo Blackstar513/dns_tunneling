@@ -48,8 +48,9 @@ The testing environment can be ended like this:
 ```sh
 docker-compose down
 ```
- 
 
+## Specific Client Instructions
+[Client README](./client/README.md)
 
-## Linux
-dig google.com @127.0.0.1
+## Specific Server Instructions
+[Server README](./server/README.md)
