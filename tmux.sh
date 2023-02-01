@@ -15,13 +15,23 @@ tmux rename-window 'DNS Tunneling'
 tmux select-window -t dns_tunneling:0
 tmux set -g pane-border-status top
 tmux select-pane -t 0 -T "Firewall (logs)"
+
 tmux split-window -v -t 0 'docker exec -it $(docker ps -aqf "name=$SERVER_NAME") python -u nameserver.py'
 tmux select-pane -t 1 -T "Server (logs)"
+tmux split-window -v -t 0 'docker container logs --follow $(docker ps -aqf "name=$DNS_SERVER_NAME")'
+tmux select-pane -t 1 -T "DNS-Server (logs)"
 
 tmux split-window -hbf -t 0 'docker exec -it $(docker ps -aqf "name=$CLIENT_NAME") sh'
 tmux select-pane -t 0 -T "Client"
-tmux split-window -v -t 0 'docker exec -it $(docker ps -aqf "name=$SERVER_NAME") sh -c "sleep 1 && python cli_commander.py"'
-tmux select-pane -t 1 -T "Server"
+tmux split-window -v -t 0 'docker exec -it $(docker ps -aqf "name=$FIREWALL_NAME") sh'
+tmux select-pane -t 1 -T "Firewall"
+tmux split-window -v -t 1 'docker exec -it $(docker ps -aqf "name=$SERVER_NAME") sh -c "sleep 1 && python cli_commander.py"'
+tmux select-pane -t 2 -T "Server"
+
+tmux resize-pane -L -t 0 9
+tmux resize-pane -D -t 0 2
+tmux resize-pane -D -t 2 2
+tmux resize-pane -U -t 4 5
 
 
 tmux select-pane -t 0
