@@ -10,11 +10,4 @@ cp fail2ban/filter.d/dns.conf /etc/fail2ban/filter.d
 cp fail2ban/jail.d/dns.conf /etc/fail2ban/jail.d
 rm /etc/fail2ban/jail.d/alpine-ssh.conf
 
-# fail2ban reads this config file that will be written to by 
-# dns_traffic_monitor.py
-# It needs to exist at the start of fai2ban
-touch ./dns_traffic_monitor.log
-
-fail2ban-server -b
-
 python -u ./dns_traffic_monitor.py

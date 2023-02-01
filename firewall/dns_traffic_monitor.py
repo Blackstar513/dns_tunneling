@@ -6,17 +6,11 @@ import io
 import sys
 import logging
 
-logging.basicConfig(level=logging.INFO)
-logFormatter = logging.Formatter("%(message)s")
+logging.basicConfig(level=logging.INFO, format='%(message)s')
+
 rootLogger = logging.getLogger()
-
 fileHandler = logging.FileHandler("dns_traffic_monitor.log")
-fileHandler.setFormatter(logFormatter)
 rootLogger.addHandler(fileHandler)
-
-consoleHandler = logging.StreamHandler()
-consoleHandler.setFormatter(logFormatter)
-rootLogger.addHandler(consoleHandler)
 
 tcpdump_regex = re.compile('^(\d{2}:\d{2}:\d{2}.\d{6}) IP (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}).\d+ > (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}).\d+: .* ((A|TXT)\??) (.*) \(\d+\)$')
 
@@ -38,13 +32,10 @@ def monitor(interface):
 
             client_ip = from_ip if request_type.endswith("?") else to_ip
 
-            analysis = ""
+            long_payload_dected = True if len(payload) > 200 else False
+            shortened_message = f'{payload[0:40]}{"…" if len(payload) > 40 else ""}'.ljust(41)
 
-            if len(payload) > 200:
-                analysis = "very long payload; "
-
-
-            rootLogger.info(f'{time} {client_ip} {request_type} {payload[0:50]}{"…" if len(payload) > 50 else ""}: {"🛑 " if len(analysis) > 0 else "✅"}{analysis}')
+            rootLogger.info(f'{str(time)[:12]} {client_ip} {request_type.ljust(4)} {shortened_message}: {"🛑 " if long_payload_dected else "✅"}')
 
 
 
