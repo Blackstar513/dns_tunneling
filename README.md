@@ -36,10 +36,9 @@ A predefined tmux session is provided to interact with the system:
 
 The started session will look like this:
 
-<video width="390" controls>
-  <source src="doc/img/tmux_demo.mov">
-  <img src="doc/img/tmux_demo.png">
-</video>
+![demo screenshot](doc/img/tmux_demo.png)
+![demo video](doc/img/tmux_demo.mov)
+
 
 The focus in tmux can be changed by pressing <kbd>STRG</kbd> + <kbd>B</kbd> 
 and then <kbd>↑</kbd>,<kbd>↓</kbd>,<kbd>→</kbd>,<kbd>←</kbd> to switch to another pane.
