@@ -80,7 +80,7 @@ evil.bot
 
 #### Poll
 
-##### Noting
+##### Nothing
 
 - NOTHING
 
@@ -95,7 +95,7 @@ evil.bot
 
 #### Continue
 
-##### Noting
+##### Nothing
 
 - NOTHING
 
