@@ -30,7 +30,7 @@ tmux select-pane -t 2 -T "Server"
 
 tmux resize-pane -L -t 0 9
 tmux resize-pane -D -t 0 2
-tmux resize-pane -D -t 2 2
+tmux resize-pane -D -t 2 3
 tmux resize-pane -U -t 4 5
 
 
