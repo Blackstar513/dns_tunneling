@@ -6,7 +6,7 @@ This repository contains a reference implementation of a client and server that 
 
 Use at your own risk!
 
-![demo screenshot](doc/img/tmux_demo.png)
+https://github.com/user-attachments/assets/759263db-198c-479b-b797-0bc54235d100
 
 ## Server and Client
 
